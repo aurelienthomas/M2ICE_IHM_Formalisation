@@ -9,7 +9,8 @@
           xsi:schemaLocation="http://www.w3.org/2001/06/grammar
                               grammar.xsd"
           xml:lang="fr-FR" root="answer" tag-format="semantics/1.0">
-          
+
+   todo : écrire l'agancement des rules
    <rule id="answer" scope="public"> 
     <ruleref special="GARBAGE" /> 
     <one-of>
@@ -20,39 +21,35 @@
     </one-of>
     <ruleref special="GARBAGE" />
   </rule>
-       
-  <rule id="forme">
-    <one-of>
-      <item>rectangle</item>
-      <item>ellipse</item>
-    </one-of> 
-  </rule> 
+
   <rule id="couleur">
     <one-of>
-      <item>rouge</item>
-      <item>bleu</item>
-      <item>jaune</item>
-      <item>vert</item>
-      <item>rose</item>
-      <item>orange</item>
-      <item>noir</item>
-      <item>gris</item>
-      <item>de cette couleur</item>
+      <item>rouge</item><tag>out="red";</tag>
+      <item>bleu</item><tag>out="blue";</tag>
+      <item>jaune</item><tag>out="yellow";</tag>
+      <item>vert</item><tag>out="green";</tag>
+      <item>rose</item><tag>out="pink";</tag>
+      <item>orange</item><tag>out="orange";</tag>
+      <item>noir</item><tag>out="black";</tag>
+      <item>gris</item><tag>out="grey";</tag>
+      <item>de cette couleur</item><tag>out="color";</tag>
     </one-of>
   </rule>
-    <rule id="position">
+
+  <rule id="position">
     <one-of>
       <item>ici</item>
       <item>là</item>
       <item>à cette position</item>
-    </one-of> 
-  </rule>
+    </one-of>
+  </rule><tag>out="click";</tag>
+
   </rule>
     <rule id="objet">
     <one-of>
-      <item>ce rectangle</item>
-      <item>cette ellipse</item>
-      <item>cet objet</item>
+      <item>ce rectangle</item><tag>out="isRectangle";</tag>
+      <item>cette ellipse</item><tag>out="isEllipse";</tag>
+      <item>cet objet</item><tag>out="anyObject";</tag>
     </one-of> 
   </rule>
 </grammar>
