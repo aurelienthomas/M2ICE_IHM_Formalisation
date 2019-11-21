@@ -49,4 +49,23 @@ public class Main {
             e.printStackTrace();
         }
     }
+
+    protected int[] click(){
+        // TODO: 21/11/2019 coder fonction "click" qui renvoit la position du click
+    }
+
+    protected String color(){
+        // TODO: 21/11/2019 coder fonction "color" qui renvoit la couleur de l'objet choisi
+    }
+    protected boolean isRectangle(){
+        // TODO: 21/11/2019 coder fonction "isRectangle" qui verifie si l'object est bien un rectangle
+    }
+
+    protected boolean isEllipse(){
+        // TODO: 21/11/2019 coder fonction "isEllipse" qui verifie si l'object est bien une ellipse
+    }
+
+    protected String anyObject(){
+        // TODO: 21/11/2019 coder fonction "anyObject" qui renvoit le type de l'objet choisi
+    }
 }
