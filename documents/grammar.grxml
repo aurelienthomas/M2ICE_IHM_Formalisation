@@ -47,7 +47,6 @@
       <item>à cette position</item>
     </one-of> 
   </rule>
-  </rule>
     <rule id="objet">
     <one-of>
       <item>ce rectangle</item>
