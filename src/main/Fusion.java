@@ -14,7 +14,7 @@ class Fusion {
     private int xPos, yPos, xMouse, yMouse;
     private int idRecognizeColourDelete, idVocRegBind;
     private String colour = "";
-    private boolean posGiven = false, colourGiven = false;
+    private boolean posGiven = false, colourGiven = false, hasClicked = false;
     private ArrayList<String> listFormNom = new ArrayList<>();
     private Figure figureObserved;
 
@@ -31,7 +31,6 @@ class Fusion {
         }
         actionListener();
         FigureNameListListener();
-        clickBindPalette(); //Fonction de test
     }
 
     /**
@@ -68,9 +67,13 @@ class Fusion {
      */
     private void CoordBindListener() {
         try {
-            busIvy.bindMsgOnce("^Palette:MouseMoved x=(.*) y=(.*)$", (client, args) -> {
+            busIvy.bindMsgOnce("^Palette:MouseClicked x=(.*) y=(.*)$", (client, args) -> {
                 xMouse = Integer.parseInt(args[0]);
                 yMouse = Integer.parseInt(args[1]);
+                sendMessageToBus("Click: (" +xMouse+","+yMouse+")");
+                xPos = xMouse;
+                yPos = yMouse;
+                hasClicked = true;
             });
         } catch (IvyException e) {
             e.printStackTrace();
@@ -102,46 +105,13 @@ class Fusion {
     }
 
     /**
-     * Listener du click de la souris sur la palette
-     * //////////////////////////////////////////////////////////////////////////
-     * A SUPPRIMER
-     * /////////////////////////////////////////////////////////////////////////
-     */
-    private void clickBindPalette() {
-        try {
-            busIvy.bindMsg("^Palette:MouseClicked x=(.*) y=(.*)$", (client, args) -> {
-                System.out.println("Hello3");
-            });
-            System.out.println("hello");
-            busIvy.waitForMsg("^Palette:MouseClicked x=(.*) y=(.*)$", 1000000);
-            System.out.println("Hello2");
-        } catch (IvyException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
      * Envoie la requête tester point au coordonnées survolées par le curseur
      */
     private void testerPoint() {
         sendMessageToBus("Palette:TesterPoint x=" + xMouse + " y=" + yMouse);
     }
 
-    /**
-     * Listener de la commande vocale de couleur et position
-     */
-    private void cmdVocListenerForCreateFigure() {
-        try {
-            idVocRegBind = busIvy.bindMsg("^sra5 Text=(.*) Confidence=(.*)$", (client, args) -> {
-                sendMessageToBus("ColourBindListener: text = " + args[0]);
-                String cmd = args[0];
-                setColour(cmd);
-                setPosition(cmd);
-            });
-        } catch (IvyException e) {
-            e.printStackTrace();
-        }
-    }
+
 
     /**
      * Fonction de création des nouvelles figures sur la palette
@@ -150,17 +120,18 @@ class Fusion {
      */
     private void creerFigure(String funName) {
         cmdVocListenerForCreateFigure();
-        Timer t = new Timer(3000, ae -> {
+        CoordBindListener();
+        Timer t = new Timer(5000, ae -> {
             String msg = "Palette:" + funName;
-            if (posGiven) {
+            if (posGiven && hasClicked) {
                 msg += " x=" + xPos + " y=" + yPos;
             } else {
                 msg += " x=" + (int) (Math.random() * 400) + " y=" + (int) (Math.random() * 400);
             }
             if (colourGiven) {
-                msg += "couleurContour=" + colour;
+                msg += " couleurFond=" + colour;
             }
-            sendMessageToBus(msg + " couleurContour=red");
+            sendMessageToBus(msg);
             cleanVars();
             try {
                 busIvy.unBindMsg(idVocRegBind);
@@ -172,17 +143,32 @@ class Fusion {
         t.start();
     }
 
+    /**
+     * Listener de la commande vocale de couleur et position
+     */
+    private void cmdVocListenerForCreateFigure() {
+        try {
+            idVocRegBind = busIvy.bindMsg("^sra5 Text=(.*) Confidence=(.*)$", (client, args) -> {
+                String cmd = args[0].replace(".","").replace(" ", "");
+                setColour(cmd);
+                setPosition(cmd);
+            });
+        } catch (IvyException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void deleteFig() {
         try {
             recognizeColourDelete();
             int ListenerObjectToDelete = busIvy.bindMsg("^sra5 Text=(.*) Confidence=(.*)$", (client, args) -> {
-                String cmd = args[0];
+                String cmd = args[0].replace(".","").replace(" ", "");
                 waitForBusMessage("^ColourOfObjectToDelete:(.*)$");
                 ArrayList<String> listFormNomToDelete = (ArrayList<String>) listFormNom.clone();
                 switch (cmd) {
-                    case "cet objet":
+                    case "cetobjet":
                         break;
-                    case "ce rectangle":
+                    case "cerectangle":
                         for (String name : new ArrayList<String>(listFormNomToDelete)) {
                             getFigureInfo(name);
                             waitForBusMessage("^figInfoBindListener^:(.*)$");
@@ -192,7 +178,7 @@ class Fusion {
                             }
                         }
                         break;
-                    case "cette ellipse":
+                    case "cetteellipse":
                         for (String name : new ArrayList<String>(listFormNomToDelete)) {
                             getFigureInfo(name);
                             waitForBusMessage("^figInfoBindListener^:(.*)$");
@@ -255,7 +241,7 @@ class Fusion {
                 colour = "grey";
                 colourGiven = true;
                 break;
-            case "de cette couleur":
+            case "decettecouleur":
                 //TODO
                 testerPoint();
                 if (listFormNom.size() > 0) {
@@ -268,15 +254,15 @@ class Fusion {
             default:
                 break;
         }
+        if(colourGiven) {
+            sendMessageToBus("Colour: " + colour);
+        }
     }
 
     private void setPosition(String text) {
-        sendMessageToBus("positionBindListener: text = " + text);
-        CoordBindListener();
         if (text.contains("ici") || text.contains("la") || text.contains("a cette position")) {
-            xPos = xMouse;
-            yPos = yMouse;
             posGiven = true;
+            sendMessageToBus("Position given: " + posGiven);
         }
     }
 
@@ -314,6 +300,7 @@ class Fusion {
     private void cleanVars() {
         posGiven = false;
         colourGiven = false;
+        hasClicked = false;
         colour = "";
         xPos = -1;
         yPos = -1;

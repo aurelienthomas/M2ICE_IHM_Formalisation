@@ -13,20 +13,21 @@
    <rule id="answer" scope="public"> 
     <ruleref special="GARBAGE" /> 
     <one-of>
-      <item><ruleref uri="#yes"/>
-          <tag>out="yes";</tag></item>
-      <item><ruleref uri="#no"/>
-      <tag>out="no";</tag></item>
+      <item><ruleref uri="#forme"/>
+      <tag>out="forme";</tag></item>
+      <item><ruleref uri="#couleur"/>
+      <tag>out="couleur";</tag></item>
+      <item><ruleref uri="#position"/>
+      <tag>out="position";</tag></item>
     </one-of>
     <ruleref special="GARBAGE" />
   </rule>
-       
   <rule id="forme">
     <one-of>
       <item>rectangle</item>
       <item>ellipse</item>
-    </one-of> 
-  </rule> 
+    </one-of>
+  </rule>
   <rule id="couleur">
     <one-of>
       <item>rouge</item>
@@ -43,8 +44,8 @@
     <rule id="position">
     <one-of>
       <item>ici</item>
-      <item>là</item>
-      <item>à cette position</item>
+      <item>la</item>
+      <item>a cette position</item>
     </one-of> 
   </rule>
     <rule id="objet">
