@@ -13,7 +13,7 @@ class Fusion {
 
     private int xPos, yPos, xMouse, yMouse;
     private int idRecognizeColourDelete, idVocRegBind, idListenerObjectToDelete;
-    private String colour = "";
+    private String colour = "", nomFigToMove ="";
     private boolean posGiven = false, colourGiven = false, hasClicked = false;
     private ArrayList<String> listFormNom = new ArrayList<>();
     private Figure figureObserved;
@@ -48,12 +48,12 @@ class Fusion {
                     creerFigure("CreerEllipse");
                     break;
                 case "supprimer":
-                    deleteFig();
                     sendMessageToBus("SUPPRESION");
+                    deleteFig();
                     break;
                 case "deplacer":
-                    //TODO DEPLACER
                     sendMessageToBus("DEPLACEMENT");
+                    moveFigure();
                     break;
                 default:
                     System.out.println("Pas de forme reconnue");
@@ -65,7 +65,7 @@ class Fusion {
     /**
      * Stock les coordonnées du curseur sur la palette
      */
-    private void CoordBindListener() {
+    private void getClickCoord() {
         try {
             busIvy.bindMsgOnce("^Palette:MouseClicked x=(.*) y=(.*)$", (client, args) -> {
                 xMouse = Integer.parseInt(args[0]);
@@ -121,7 +121,7 @@ class Fusion {
      */
     private void creerFigure(String funName) {
         cmdVocListenerForCreateFigure();
-        CoordBindListener();
+        getClickCoord();
         Timer t = new Timer(5000, ae -> {
             String msg = "Palette:" + funName;
             if (posGiven && hasClicked) {
@@ -297,6 +297,79 @@ class Fusion {
         }
     }
 
+
+
+
+
+    public void moveFigure(){
+        getVocalConfirmation();
+        getClickCoord();
+        designateObjectToMove();
+        // C'est pas très propre mais ça marche
+        waitForBusMessage("^Click:(.*)$");
+        waitForBusMessage("^FigureToMove:(.*)$");
+        if(hasClicked && posGiven && !nomFigToMove.equals("")){
+            System.out.println("Palette:DeplacerObjetAbsolu nom="+ nomFigToMove +" x="+ xPos +" y="+ yPos);
+            sendMessageToBus("Palette:DeplacerObjetAbsolu nom="+ nomFigToMove +" x="+ xPos +" y="+ yPos);
+        }
+
+        try {
+            busIvy.unBindMsg(idVocRegBind);
+            busIvy.unBindMsg(idListenerObjectToDelete);
+        } catch (IvyException e) {
+            e.printStackTrace();
+        }
+        cleanVars();
+    }
+
+    private void getVocalConfirmation() {
+        try {
+            idVocRegBind = busIvy.bindMsg("^sra5 Text=(.*) Confidence=(.*)$", (client, args) -> {
+                String cmd = args[0].replace(".","").replace(" ", "");
+                setPosition(cmd);
+            });
+        } catch (IvyException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void designateObjectToMove() {
+        try {
+            idListenerObjectToDelete = busIvy.bindMsg("^sra5 Text=(.*) Confidence=(.*)$", (client, args) -> {
+                String cmd = args[0].replace(".", "").replace(" ", "");
+                String formSearched = "";
+                ArrayList<String> listFormNomToMove = (ArrayList<String>) listFormNom.clone();
+                int i = listFormNomToMove.size()-1;
+                boolean figFound = false;
+                switch (cmd) {
+                    case "cetobjet":
+                        formSearched = "";
+                        break;
+                    case "cerectangle":
+                        formSearched = "R";
+                        break;
+                    case "cetteellipse":
+                        formSearched = "E";
+                        break;
+                    default:
+                        formSearched="";
+                        break;
+                }
+                if(cmd.equals("cetobjet") || cmd.equals("cerectangle") || cmd.equals("cetteellipse")) {
+                    while (!figFound && i >= 0) {
+                        if (listFormNomToMove.get(i).contains(formSearched)) {
+                            figFound = true;
+                            nomFigToMove = listFormNomToMove.get(i);
+                        }
+                    }
+                    sendMessageToBus("FigureToMove: " + nomFigToMove);
+                }
+            });
+        } catch (IvyException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void sendMessageToBus(String msg) {
         try {
             busIvy.sendMsg(msg);
@@ -307,7 +380,7 @@ class Fusion {
 
     private void waitForBusMessage(String regex) {
         try {
-            busIvy.waitForMsg(regex, 10000);
+            busIvy.waitForMsg(regex, 5000);
         } catch (IvyException e) {
             e.printStackTrace();
         }
@@ -320,6 +393,8 @@ class Fusion {
         posGiven = false;
         colourGiven = false;
         hasClicked = false;
+        figureObserved = null;
+        nomFigToMove ="";
         colour = "";
         xPos = -1;
         yPos = -1;
