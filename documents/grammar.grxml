@@ -13,20 +13,14 @@
    <rule id="answer" scope="public"> 
     <ruleref special="GARBAGE" /> 
     <one-of>
-      <item><ruleref uri="#forme"/>
-      <tag>out="forme";</tag></item>
       <item><ruleref uri="#couleur"/>
       <tag>out="couleur";</tag></item>
       <item><ruleref uri="#position"/>
       <tag>out="position";</tag></item>
+      <item><ruleref uri="#objet"/>
+      <tag>out="objet";</tag></item>
     </one-of>
     <ruleref special="GARBAGE" />
-  </rule>
-  <rule id="forme">
-    <one-of>
-      <item>rectangle</item>
-      <item>ellipse</item>
-    </one-of>
   </rule>
   <rule id="couleur">
     <one-of>
