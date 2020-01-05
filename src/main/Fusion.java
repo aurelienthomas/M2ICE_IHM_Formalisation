@@ -12,7 +12,7 @@ class Fusion {
     private Ivy busIvy = new Ivy("monBus", "Premier message de monBusJava", null);
 
     private int xPos, yPos, xMouse, yMouse;
-    private int idRecognizeColourDelete, idVocRegBind;
+    private int idRecognizeColourDelete, idVocRegBind, idListenerObjectToDelete;
     private String colour = "";
     private boolean posGiven = false, colourGiven = false, hasClicked = false;
     private ArrayList<String> listFormNom = new ArrayList<>();
@@ -94,11 +94,12 @@ class Fusion {
 
     private void getFigureInfo(String nom) {
         try {
-            sendMessageToBus("Palette:DemanderInfo nom=" + nom);
             busIvy.bindMsgOnce("^Palette:Info nom=(.*) x=(.*) y=(.*) longueur=(.*) hauteur=(.*) couleurFond=(.*) couleurContour=(.*)$", (client, args) -> {
+                System.out.println(args[0] + "," +args[1] + "," +args[2] + "," +args[3] + "," +args[4] + "," +args[5] + "," + args[6]);
                 figureObserved = new Figure(args[0], Integer.parseInt(args[1]), Integer.parseInt(args[2]), Integer.parseInt(args[3]), Integer.parseInt(args[4]), args[5], args[6]);
                 sendMessageToBus("figInfoBindListener: nom= " + figureObserved.getNom());
             });
+            sendMessageToBus("Palette:DemanderInfo nom=" + nom);
         } catch (IvyException e) {
             e.printStackTrace();
         }
@@ -131,8 +132,8 @@ class Fusion {
             if (colourGiven) {
                 msg += " couleurFond=" + colour;
             }
-            sendMessageToBus(msg);
-            cleanVars();
+                sendMessageToBus(msg);
+                cleanVars();
             try {
                 busIvy.unBindMsg(idVocRegBind);
             } catch (IvyException e) {
@@ -161,27 +162,37 @@ class Fusion {
     private void deleteFig() {
         try {
             recognizeColourDelete();
-            int ListenerObjectToDelete = busIvy.bindMsg("^sra5 Text=(.*) Confidence=(.*)$", (client, args) -> {
+            idListenerObjectToDelete = busIvy.bindMsg("^sra5 Text=(.*) Confidence=(.*)$", (client, args) -> {
                 String cmd = args[0].replace(".","").replace(" ", "");
-                waitForBusMessage("^ColourOfObjectToDelete:(.*)$");
                 ArrayList<String> listFormNomToDelete = (ArrayList<String>) listFormNom.clone();
                 switch (cmd) {
                     case "cetobjet":
+                        for (String name : new ArrayList<String>(listFormNomToDelete)) {
+                            getFigureInfo(name);
+                            waitForBusMessage("^figInfoBindListener:(.*)$");
+                            if (!(figureObserved.getCouleurContour().equals(colour) || colour.equals("")))
+                            {
+                                listFormNomToDelete.remove(name);
+                            }
+
+                        }
                         break;
                     case "cerectangle":
                         for (String name : new ArrayList<String>(listFormNomToDelete)) {
                             getFigureInfo(name);
-                            waitForBusMessage("^figInfoBindListener^:(.*)$");
+                            waitForBusMessage("^figInfoBindListener:(.*)$");
                             if (!(figureObserved.getNom().contains("R") && (figureObserved.getCouleurContour().equals(colour) || colour.equals(""))))
                             {
                                 listFormNomToDelete.remove(name);
                             }
+
                         }
+                        System.out.println(listFormNomToDelete);
                         break;
                     case "cetteellipse":
                         for (String name : new ArrayList<String>(listFormNomToDelete)) {
                             getFigureInfo(name);
-                            waitForBusMessage("^figInfoBindListener^:(.*)$");
+                            waitForBusMessage("^figInfoBindListener:(.*)$");
                             if (!(figureObserved.getNom().contains("E") && (figureObserved.getCouleurContour().equals(colour) || colour.equals(""))))
                             {
                                 listFormNomToDelete.remove(name);
@@ -196,12 +207,15 @@ class Fusion {
                     sendMessageToBus("Palette:SupprimerObjet nom=" + name);
                 }
                 cleanVars();
-
+                try {
+                    busIvy.unBindMsg(idListenerObjectToDelete);
+                    busIvy.unBindMsg(idRecognizeColourDelete);
+                } catch (IvyException e) {
+                    e.printStackTrace();
+                }
             });
             // On attend que le bus envoie un message de suppresion pour unbind les listener
-            waitForBusMessage("^Palette:SupprimerObjet nom=(.*)$");
-            busIvy.unBindMsg(ListenerObjectToDelete);
-            busIvy.unBindMsg(idRecognizeColourDelete);
+
         } catch (IvyException e) {
             e.printStackTrace();
         }
@@ -242,14 +256,17 @@ class Fusion {
                 colourGiven = true;
                 break;
             case "decettecouleur":
-                //TODO
-                testerPoint();
                 if (listFormNom.size() > 0) {
-                    sendMessageToBus("Palette:DemanderInfo nom=" + listFormNom.get(0) + "");
+                    String nom = listFormNom.get(listFormNom.size()-1);
+                    getFigureInfo(nom);
+                    waitForBusMessage("^figInfoBindListener:(.*)$");
+                    colour = figureObserved.getCouleurFond();
+                    System.out.println(figureObserved.getNom());
+                    System.out.println(figureObserved.getCouleurFond());
+                    colourGiven = true;
                 } else {
                     sendMessageToBus("pas de forme ici");
                 }
-                colourGiven = true;
                 break;
             default:
                 break;
@@ -260,7 +277,7 @@ class Fusion {
     }
 
     private void setPosition(String text) {
-        if (text.contains("ici") || text.contains("la") || text.contains("a cette position")) {
+        if (text.equals("ici") || text.equals("la") || text.equals("acetteposition")) {
             posGiven = true;
             sendMessageToBus("Position given: " + posGiven);
         }
@@ -269,9 +286,11 @@ class Fusion {
     private void recognizeColourDelete() {
         try {
             idRecognizeColourDelete = busIvy.bindMsg("^sra5 Text=(.*) Confidence=(.*)$", (client, args) -> {
-                sendMessageToBus("ColourOfObjectToDelete: colour = " + args[0]);
                 String cmd = args[0];
                 setColour(cmd);
+                if (colourGiven){
+                sendMessageToBus("ColourOfObjectToDelete: colour = " + args[0]);
+                }
             });
         } catch (IvyException e) {
             e.printStackTrace();
